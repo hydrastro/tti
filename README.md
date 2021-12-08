@@ -31,7 +31,17 @@ sudo ln -s /opt/tti/tti.sh /usr/local/bin/tti
 ```
 
 ## Usage
-There are two ways you can run this script
+There are two ways you can run this script:
+- By pipelining some text directly into the script:
+  `cat something.txt | tti`
+- By invoking the script directly and typing the text in it.
+  Like SMTP, end your data with `\n.\n`
+  ```shell
+  $tti
+  your text
+  some other text
+  .
+  ```
 
 ## Contributing
 Feel free to contribute, pull requests are always welcome.  
