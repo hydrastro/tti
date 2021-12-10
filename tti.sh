@@ -1,15 +1,21 @@
 #!/bin/bash
 
 : "${WRAP_COLUMN:=80}"
-#: "${FONT_FILE:=/usr/share/fonts/truetype/unifont/unifont.ttf}"
+: "${FONT_FILE:=/usr/share/fonts/truetype/unifont/unifont.ttf}"
 : "${FONT_SIZE:=25}"
-: "${FILL_COLOR:=black}"
-: "${BACKGROUND_COLOR:=white}"
+: "${FILL_COLOR:=white}"
+: "${BACKGROUND_COLOR:=black}"
+: "${OBFUSCATE:=0}"
 : "${NOISE_ROUNDS:=2}"
 : "${NOISE_TYPE:=Impulse}"
-: "${LINES_PER_10000PX:=3}"
+: "${LINES_PER_10000PX:=2}"
 : "${LINES_THICNESS:=1}"
-: "${LINES_COLOR:=black}"
+: "${LINES_COLOR:=#ff0000}"
+: "${SWIRL_DEGREES:=20}"
+: "${WRAP_COLUMNS:=32}"
+: "${STROKE_COLOR:=random}"
+: "${STROKE_WIDTH:=0}"
+: "${WAVE_AMPLITUDE:=5x128}"
 
 #
 # Generate Image
@@ -24,50 +30,100 @@ function tti_generate_image() {
     fi
     escaped=$(tti_adjust_text "$1")
     output_image="$2"
+    if [[ "$BACKGROUND_COLOR" == "random" ]]; then
+        BACKGROUND_COLOR=$(tti_get_random_hex_color)
+    fi
+    if [[ "$FILL_COLOR" == "random" ]]; then
+        FILL_COLOR=$(tti_get_random_hex_color)
+    fi
+    if [[ "$UNDER_COLOR" == "random" ]]; then
+        UNDER_COLOR=$(tti_get_random_hex_color)
+    fi
+    if [[ "$STROKE_COLOR" == "random" ]]; then
+        STROKE_COLOR=$(tti_get_random_hex_color)
+    fi
     imagemagick_options=(
-        #-font "$FONT_FILE"
+        -font "$FONT_FILE"
         #-size "$IMAGE_SIZE"
         -pointsize "$FONT_SIZE"
         -fill "$FILL_COLOR"
         -background "$BACKGROUND_COLOR"
         #-undercolor "$UNDER_COLOR"
-        #-stroke "$STROKE"
+        #-stroke "$STROKE_COLOR"
         #-strokewidth "$STROKE_WIDTH"
         #-kerning "$KERNING"
         #-interword-spacing "$INTERWORD_SPACING"
         #-interline-spacing "$INTERLINE_SPACING"
         #-gravity "$GRAVITY"
         label:"$escaped"
-        #-emboss 0x1
         -flatten
     )
-    i=0
-    while [[ "$i" -lt "$NOISE_ROUNDS" ]]; do
-        imagemagick_options+=(+noise "$NOISE_TYPE")
-        ((i = i + 1))
-    done
+    if [[ "$OBFUSCATE" != 0 ]]; then
+        imagemagick_options+=(
+            -wave "$WAVE_AMPLITUDE"
+            -rotate -90
+            -wave "$WAVE_AMPLITUDE"
+            -rotate +90
+            -emboss 0x1
+        )
+        i=0
+        while [[ "$i" -lt "$NOISE_ROUNDS" ]]; do
+            imagemagick_options+=(+noise "$NOISE_TYPE")
+            ((i = i + 1))
+        done
+    fi
     convert "${imagemagick_options[@]}" "$output_image"
+    if [[ "$OBFUSCATE" == 0 ]]; then
+        return;
+    fi
     i=0
     tti_get_image_size "$output_image"
     lines_number=$((("$LINES_PER_10000PX" * "$WIDTH" * "$HEIGHT") / 10000))
-    echo $lines_number
     imagemagick_second_round=(
         "$output_image"
+        -background "$BACKGROUND_COLOR"
         -flatten
     )
     while [[ "$i" -lt "$lines_number" ]]; do
-        X_0=$(tti_get_random_number "0" "$WIDTH")
-        X_1=$(tti_get_random_number "0" "$WIDTH")
-        Y_0=$(tti_get_random_number "0" "$HEIGHT")
-        Y_1=$(tti_get_random_number "0" "$HEIGHT")
-        imagemagick_second_round+=(-stroke "$LINES_COLOR" -strokewidth "$LINES_THICNESS")
+        if [[ "$LINES_COLOR" == "random" ]]; then
+            line_color=$(tti_get_random_hex_color)
+        else
+            line_color="$LINES_COLOR"
+        fi
+        if [[ $(tti_get_random_number "0" $(("$WIDTH" + "$HEIGHT"))) -gt       \
+        "$WIDTH" ]]; then
+            X_0=0
+            X_1="$WIDTH"
+            Y_0=$(tti_get_random_number "0" "$HEIGHT")
+            Y_1=$(tti_get_random_number "0" "$HEIGHT")
+        else
+            X_0=$(tti_get_random_number "0" "$WIDTH")
+            X_1=$(tti_get_random_number "0" "$WIDTH")
+            Y_0=0
+            Y_1="$HEIGHT"
+        fi
+        imagemagick_second_round+=(-stroke "$line_color" -strokewidth          \
+        "$LINES_THICNESS")
         imagemagick_second_round+=(-draw "line $X_0,$Y_0 $X_1,$Y_1")
         ((i = i + 1))
     done
-    imagemagick_second_round+=(-swirl 45)
+    imagemagick_second_round+=(-swirl "$SWIRL_DEGREES")
     convert "${imagemagick_second_round[@]}" "$output_image"
 }
 
+#
+# Get Random Hex Color
+#
+function tti_get_random_hex_color() {
+    local alphabet color char
+    alphabet="0123456789ABCDEF"
+    color=""
+    for i in {0..5}; do
+        char=${alphabet:$RANDOM % ${#alphabet}:1}
+        color+=$char
+    done
+    printf "#%s" "$color"
+}
 
 #
 # Get Image Size
@@ -107,7 +163,7 @@ function tti_adjust_text() {
     if [[ $# -eq 0 ]]; then
         tti_exit "Error: missing argument(s) for ${FUNCNAME[0]}"
     fi
-    printf "%s" "$1" | sed -E 's/(\\|@|%)/\\\1/g' | fold -w 24
+    printf "%s" "$1" | sed -E 's/(\\|@|%)/\\\1/g' | fold -w "$WRAP_COLUMNS"
 }
 
 #
@@ -157,8 +213,7 @@ function tti_main() {
     tti_generate_image "$buffer" "$output_image"
     tti_copy_to_clipboard "$output_image"
     if [[ -f "$output_image" ]]; then
-       # rm "$output_image"
-       echo "OK"
+        rm "$output_image"
     fi
 }
 
