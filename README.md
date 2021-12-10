@@ -1,5 +1,11 @@
 # text to image
-Text to image script written in bash.
+Text to image bash script with multiple highly customizable options for
+obfuscation.  
+Copies images directly to the clipboard.  
+It could be used as captcha.  
+Some examples:  
+![sample image 1](https://github.com/hydrastro/tti/blob/main/normal.jpg?raw=true)
+![sample image 2](https://github.com/hydrastro/tti/blob/main/obfuscated.jpg?raw=true)
 
 ## Dependencies
 This scripts has the following dependencies:
@@ -11,8 +17,8 @@ Which can be easily installed with these commands:
 - Arch: `pacman -S imagemagick xclip`
 
 ## Configuration
-There are some hardcoded configs you might want to change, for instance: the
-images background color, the images fore color, the images font, etc.
+There are some hardcoded configs you might want to change, check the script
+source code if you're curious.
 
 ## Installation
 The script installation is trivial: just clone this whole repository or copy the
@@ -35,13 +41,14 @@ There are two ways you can run this script:
 - By pipelining some text directly into the script:
   `cat something.txt | tti`
 - By invoking the script directly and typing the text in it.
-  Like SMTP, end your data with `\n.\n`
+  End your data with a dot.
   ```shell
-  $tti
+  [user@machine ~]$ tti
   your text
   some other text
   .
   ```
+(Wanna type a dot? Ehhh... no)
 
 ## Contributing
 Feel free to contribute, pull requests are always welcome.  
